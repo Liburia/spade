@@ -68,6 +68,7 @@ pub use delaunay_core::TriangulationExt;
 
 pub(crate) use delaunay_core::RemovalResult;
 
+mod glam_support;
 #[cfg(feature = "mint")]
 mod mint_support;
 #[cfg(test)]
