@@ -20,6 +20,11 @@ impl From<Vec2> for Point2<f32> {
         }
     }
 }
+impl From<Point2<f32>> for Vec2 {
+    fn from(value: Point2<f32>) -> Self {
+        Self::new(value.x, value.y)
+    }
+}
 
 impl HasPosition for DVec2 {
     type Scalar = f64;
@@ -37,5 +42,10 @@ impl From<DVec2> for Point2<f64> {
             x: value.x,
             y: value.y,
         }
+    }
+}
+impl From<Point2<f64>> for DVec2 {
+    fn from(value: Point2<f64>) -> Self {
+        Self::new(value.x, value.y)
     }
 }
