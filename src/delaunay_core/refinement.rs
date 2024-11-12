@@ -173,6 +173,7 @@ pub struct RefinementParameters<S: SpadeNum + Float> {
     angle_limit: AngleLimit,
     min_area: Option<S>,
     max_area: Option<S>,
+    max_edge_length: Option<S>,
     keep_constraint_edges: bool,
     exclude_outer_faces: bool,
 }
@@ -184,6 +185,7 @@ impl<S: SpadeNum + Float> Default for RefinementParameters<S> {
             angle_limit: AngleLimit::from_radius_to_shortest_edge_ratio(1.0),
             min_area: None,
             max_area: None,
+            max_edge_length: None,
             exclude_outer_faces: false,
             keep_constraint_edges: false,
         }
@@ -265,6 +267,11 @@ impl<S: SpadeNum + Float> RefinementParameters<S> {
         self
     }
 
+    pub fn with_max_allowed_edge_lenth(mut self, max_length: S) -> Self {
+        self.max_edge_length = Some(max_length);
+        self
+    }
+
     /// Specifies how many additional vertices may be inserted during Delaunay refinement.
     ///
     /// Refinement may, in some cases, fail to terminate if the angle limit is set too high
@@ -339,7 +346,24 @@ impl<S: SpadeNum + Float> RefinementParameters<S> {
             }
         }
 
-        let (_, length2) = face.shortest_edge();
+        let [e0, e1, e2] = face.adjacent_edges();
+        let [l0, l1, l2] = [e0.length_2(), e1.length_2(), e2.length_2()];
+
+        if let Some(max_length) = self.max_edge_length {
+            let max_length2 = max_length * max_length;
+            if l0 > max_length2 || l1 > max_length2 || l2 > max_length2 {
+                return RefinementHint::MustRefine;
+            }
+        }
+
+        // Shortest edge
+        let length2 = if l0 < l1 && l0 < l2 {
+            l0
+        } else if l1 < l2 {
+            l1
+        } else {
+            l2
+        };
         let (_, radius2) = face.circumcircle();
 
         let ratio2 = radius2 / length2;
@@ -943,7 +967,7 @@ fn nearest_power_of_two<S: Float + SpadeNum>(input: S) -> S {
     input.log2().round().exp2()
 }
 
-fn calculate_outer_faces<V: HasPosition, DE: Default, UE: Default, F: Default, L>(
+pub fn calculate_outer_faces<V: HasPosition, DE: Default, UE: Default, F: Default, L>(
     triangulation: &ConstrainedDelaunayTriangulation<V, DE, UE, F, L>,
 ) -> HashSet<FixedFaceHandle<InnerTag>>
 where
