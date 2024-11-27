@@ -156,9 +156,9 @@ pub fn main() -> Result<()> {
             .context("Failed to convert to ImageBuffer")?;
 
         let mut data_jpeg: Cursor<Vec<u8>> = Cursor::new(Vec::new());
-        buffer.write_to(&mut data_jpeg, image::ImageFormat::Jpeg)?;
+        buffer.write_to(&mut data_jpeg, image::ImageFormat::Png)?;
 
-        std::fs::write(format!("images/{}.jpg", name), data_jpeg.get_ref())?;
+        std::fs::write(format!("images/{}.png", name), data_jpeg.get_ref())?;
 
         // Encode image as <img> tag for inclusion into the documentation
         let encoded = base64::engine::general_purpose::STANDARD_NO_PAD.encode(data_jpeg.get_ref());
