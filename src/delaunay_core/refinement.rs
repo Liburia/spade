@@ -519,6 +519,8 @@ where
         // Stores all faces that should be checked for their area and angles ("skinniness").
         let mut skinny_triangle_candidates: VecDeque<_> = self.fixed_inner_faces().collect();
 
+        let mut invalid_edges = HashSet::new();
+
         let num_initial_vertices: usize = self.num_vertices();
         let num_additional_vertices = parameters
             .max_additional_vertices
@@ -569,6 +571,7 @@ where
                     &mut constraint_edge_map,
                     forcibly_split_segment,
                     &mut excluded_faces,
+                    &mut invalid_edges,
                 );
                 continue;
             }
@@ -602,6 +605,7 @@ where
                                 &mut constraint_edge_map,
                                 segment_candidate,
                                 &mut excluded_faces,
+                                &mut invalid_edges,
                             );
                         }
                     }
@@ -674,6 +678,10 @@ where
                             continue;
                         }
 
+                        if invalid_edges.contains(&edge.as_undirected().fix()) {
+                            continue;
+                        }
+
                         if edge.is_constraint_edge() {
                             // Splitting constraint edges may require updating the `excluded_faces` set.
                             // This is a little cumbersome, we'll re-use the existing implementation of edge
@@ -714,6 +722,10 @@ where
                             // We found an encroaching edge! Makes sure that we won't attempt to
                             // insert the circumcenter.
                             is_encroaching = true;
+
+                            if invalid_edges.contains(&edge.as_undirected().fix()) {
+                                continue;
+                            }
 
                             if !parameters.keep_constraint_edges || !edge.is_constraint_edge() {
                                 // New circumcenter would encroach a constraint edge. Don't insert the circumcenter
@@ -781,6 +793,7 @@ where
         constraint_edge_map: &mut HashMap<FixedVertexHandle, [FixedVertexHandle; 2]>,
         encroached_edge: FixedUndirectedEdgeHandle,
         excluded_faces: &mut HashSet<FixedFaceHandle<InnerTag>>,
+        invalid_edges: &mut HashSet<FixedUndirectedEdgeHandle>,
     ) {
         // Resolves an encroachment by splitting the encroached edge. Since this reduces the diametral circle, this will
         // eventually get rid of the encroachment completely.
@@ -838,6 +851,7 @@ where
         let final_position = v0.position().mul(weight0).add(v1.position().mul(weight1));
 
         if !validate_constructed_vertex(final_position, segment) {
+            invalid_edges.insert(segment.as_undirected().fix());
             return;
         }
 
